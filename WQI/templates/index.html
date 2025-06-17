@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Quality Monitoring Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #2a4365, #4a5568);
+            color: #f3f4f6;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            background: rgba(30, 41, 59, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        header {
+            background: linear-gradient(to right, #2c3e50, #4a5568);
+            padding: 25px 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #64b3f4, #90cdf4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            color: #cbd5e1;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        @media (max-width: 1100px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .prediction-card, .charts-card {
+            background: rgba(26, 32, 44, 0.8);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(74, 85, 104, 0.5);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(74, 85, 104, 0.3);
+        }
+
+        .card-header h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #90cdf4;
+        }
+
+        .prediction-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 768px) {
+            .prediction-form {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #cbd5e1;
+        }
+
+        input, select {
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(30, 41, 59, 0.7);
+            color: #f3f4f6;
+            font-size: 1rem;
+            border: 1px solid rgba(74, 85, 104, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.3);
+        }
+
+        select {
+            appearance: none;
+            background-image: linear-gradient(45deg, transparent 50%, #cbd5e1 50%),
+                              linear-gradient(135deg, #cbd5e1 50%, transparent 50%);
+            background-position: calc(100% - 20px) calc(1em + 6px),
+                                 calc(100% - 15px) calc(1em + 6px);
+            background-size: 8px 8px;
+            background-repeat: no-repeat;
+        }
+
+        button {
+            padding: 14px 25px;
+            background: linear-gradient(to right, #4299e1, #3182ce);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(66, 153, 225, 0.3);
+        }
+
+        button:hover {
+            background: linear-gradient(to right, #3182ce, #2b6cb0);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(66, 153, 225, 0.4);
+        }
+
+        .result-container {
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 12px;
+            padding: 25px;
+            min-height: 180px;
+            border: 1px solid rgba(74, 85, 104, 0.3);
+        }
+
+        .result-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .result-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .result-item {
+            background: rgba(26, 32, 44, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            flex: 1;
+            min-width: 200px;
+            border-left: 4px solid #4299e1;
+        }
+
+        .result-label {
+            font-size: 0.95rem;
+            color: #a0aec0;
+            margin-bottom: 5px;
+        }
+
+        .result-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .quality-excellent { color: #48bb78; }
+        .quality-good { color: #4299e1; }
+        .quality-fair { color: #ecc94b; }
+        .quality-poor { color: #f56565; }
+
+        .controls-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(30, 41, 59, 0.7);
+            padding: 12px 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(74, 85, 104, 0.3);
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .chart-container {
+            background: rgba(26, 32, 44, 0.7);
+            border-radius: 12px;
+            padding: 20px;
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            border-top: 4px solid;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .chart-container:hover {
+            transform: translateY(-5px);
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #cbd5e1;
+            text-align: center;
+        }
+
+        .chart-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .ammonia-chart { border-top-color: #ef4444; }
+        .phosphate-chart { border-top-color: #f59e0b; }
+        .oxygen-chart { border-top-color: #10b981; }
+        .nitrate-chart { border-top-color: #3b82f6; }
+        .ph-chart { border-top-color: #8b5cf6; }
+        .temperature-chart { border-top-color: #f472b6; }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background: rgba(26, 32, 44, 0.7);
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid rgba(74, 85, 104, 0.3);
+        }
+
+        .status-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .status-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 5px 0;
+        }
+
+        #quality-level, #current-wqi {
+            font-size: 2.5em; /* Adjust as needed */
+            font-weight: bold;
+            margin: 5px 0;
+}
+
+        .status-label {
+            font-size: 1.4rem;
+            color: #a0aec0;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #4299e1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .explanation {
+            background: rgba(26, 32, 44, 0.7);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .explanation h3 {
+            color: #90cdf4;
+            margin-bottom: 15px;
+        }
+
+        .explanation p {
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .prediction-form {
+                grid-template-columns: 1fr;
+            }
+            
+            .result-row {
+                flex-direction: column;
+            }
+            
+            .controls-row {
+                flex-direction: column;
+            }
+            
+            .control-group {
+                width: 100%;
+            }
+            
+            header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Water Quality Monitoring Dashboard</h1>
+            <p>Advanced analytics and predictive modeling for water quality assessment using AI/ML techniques</p>
+        </header>
+        
+        <div class="dashboard-grid">
+            <div class="prediction-card">
+                <div class="card-header">
+                    <h2>Water Quality Prediction</h2>
+                </div>
+                
+                <form class="prediction-form" id="predictionForm">
+                    <div class="form-group">
+                        <label for="dateInput">Prediction Date</label>
+                        <input type="date" id="dateInput" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modelSelect">Prediction Model</label>
+                        <select id="modelSelect" required>
+                            <option value="cnn_lstm" selected>CNN-LSTM Model</option>
+                            <option value="cnn">Convolutional Neural Network</option>
+                            <option value="lstm">Long Short-Term Memory</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="submit">Predict Water Quality</button>
+                    </div>
+                </form>
+                
+                <div class="result-container">
+                    <div class="result-content" id="result">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="explanation">
+                    <h3>How It Works</h3>
+                    <p>Our system uses machine learning models to predict the Water Quality Index (WQI) based on historical data. The system analyzes multiple parameters including chemical levels, temperature, and environmental factors to provide accurate predictions. By leveraging daily patterns and long-term trends, the model delivers reliable forecasts for both short-term and future water quality assessments.</p>
+                    <p>WQI Classification:</p>
+                    <p>Excellent (90-100), Good (70-89), Fair (50-69), Poor (0-49)</p>
+                </div>
+            </div>
+            
+            <div class="charts-card">
+                <div class="card-header">
+                    <h2>Water Quality Analysis</h2>
+                </div>
+                
+                <div class="controls-row">
+                    <div class="control-group">
+                        <label for="timeRange">Time Range:</label>
+                        <select id="timeRange" class="graph-control">
+                            <option value="all" selected>All Available Data</option>
+                            <option value="2years">Last 2 Years</option>
+                            <option value="5years">Last 5 Years</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="parameterSelect">Parameter:</label>
+                        <select id="parameterSelect" class="graph-control">
+                            <option value="all" >All Parameters</option>
+                            <option value="ammonia" selected>Ammonia</option>
+                            <option value="phosphate">Phosphate</option>
+                            <option value="oxygen">Dissolved Oxygen</option>
+                            <option value="nitrate">Nitrate</option>
+                            <option value="ph">pH Level</option>
+                            <option value="temperature">Temperature</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="charts-grid">
+                    <div class="chart-container ammonia-chart">
+                        <div class="chart-title">Ammonia (mg/L)</div>
+                        <div class="chart-wrapper">
+                            <canvas id="ammoniaChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container phosphate-chart">
+                        <div class="chart-title">Phosphate (mg/L)</div>
+                        <div class="chart-wrapper">
+                            <canvas id="phosphateChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container oxygen-chart">
+                        <div class="chart-title">Dissolved Oxygen (mg/L)</div>
+                        <div class="chart-wrapper">
+                            <canvas id="oxygenChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container nitrate-chart">
+                        <div class="chart-title">Nitrate (mg/L)</div>
+                        <div class="chart-wrapper">
+                            <canvas id="nitrateChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container ph-chart">
+                        <div class="chart-title">pH Level</div>
+                        <div class="chart-wrapper">
+                            <canvas id="phChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container temperature-chart">
+                        <div class="chart-title">Temperature (°C)</div>
+                        <div class="chart-wrapper">
+                            <canvas id="temperatureChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="status-bar">
+                    <div class="status-item">
+                        <div class="status-value" id="current-wqi">--</div>
+                        <div class="status-label">Current WQI</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="quality-level">--</div>
+                        <div class="status-label">Water Quality</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Store water quality data from backend
+        let waterQualityData = [];
+        
+        // Store chart instances
+        const charts = {};
+        
+        // Chart configurations
+        const chartConfigs = {
+            ammoniaChart: { 
+                label: 'Ammonia (mg/L)', 
+                borderColor: '#EF4444', 
+                pointColor: '#EF4444',
+                fillColor: 'rgba(239, 68, 68, 0.1)'
+            },
+            phosphateChart: { 
+                label: 'Phosphate (mg/L)', 
+                borderColor: '#F59E0B', 
+                pointColor: '#F59E0B',
+                fillColor: 'rgba(245, 158, 11, 0.1)'
+            },
+            oxygenChart: { 
+                label: 'Dissolved Oxygen (mg/L)', 
+                borderColor: '#10B981', 
+                pointColor: '#10B981',
+                fillColor: 'rgba(16, 185, 129, 0.1)'
+            },
+            nitrateChart: { 
+                label: 'Nitrate (mg/L)', 
+                borderColor: '#3B82F6', 
+                pointColor: '#3B82F6',
+                fillColor: 'rgba(59, 130, 246, 0.1)'
+            },
+            phChart: { 
+                label: 'pH Level', 
+                borderColor: '#8B5CF6', 
+                pointColor: '#8B5CF6',
+                fillColor: 'rgba(139, 92, 246, 0.1)'
+            },
+            temperatureChart: { 
+                label: 'Temperature (°C)', 
+                borderColor: '#F472B6', 
+                pointColor: '#F472B6',
+                fillColor: 'rgba(244, 114, 182, 0.1)'
+            }
+        };
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Set default date to today
+            const dateInput = document.getElementById('dateInput');
+            dateInput.valueAsDate = new Date();
+            
+            // Get max date from backend
+            await fetchMaxDate();
+            
+            // Fetch water quality data
+            await fetchWaterQualityData();
+            
+            // Update status bar with real data
+            updateStatusBar();
+            
+            // Initialize charts
+            initializeCharts();
+            
+            // Setup form submission
+            document.getElementById('predictionForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                performPrediction();
+            });
+            
+            // Setup chart controls
+            document.getElementById('timeRange').addEventListener('change', updateCharts);
+            document.getElementById('parameterSelect').addEventListener('change', filterCharts);
+        });
+
+        // Fetch max date from backend
+        async function fetchMaxDate() {
+            try {
+                const response = await fetch('/api/max-date');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    document.getElementById('dateInput').max = data.max_date;
+                }
+            } catch (error) {
+                console.error('Error fetching max date:', error);
+            }
+        }
+
+        // Fetch water quality data from backend
+        async function fetchWaterQualityData() {
+            try {
+                const response = await fetch('/api/water-quality-data');
+                const data = await response.json();
+                waterQualityData = data;
+                
+                // Sort by date ascending
+                waterQualityData.sort((a, b) => 
+                    new Date(a.Date) - new Date(b.Date)
+                );
+                
+                console.log('Loaded water quality data:', waterQualityData.length, 'records');
+            } catch (error) {
+                console.error('Error fetching water quality data:', error);
+                // Show error in result container
+                document.getElementById('result').innerHTML = `
+                    <div class="result-content">
+                        <h3>Data Error</h3>
+                        <p>Failed to load water quality data: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Update status bar with real data
+        function updateStatusBar() {
+            if (waterQualityData.length === 0) return;
+            
+            // Get latest data point
+            const latest = waterQualityData[waterQualityData.length - 1];
+            
+            // Calculate averages for last 12 months
+            const twelveMonthsAgo = new Date();
+            twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+            
+            const lastYearData = waterQualityData.filter(item => 
+                new Date(item.Date) >= twelveMonthsAgo
+            );
+            
+            if (lastYearData.length === 0) return;
+            
+            const avgTemp = lastYearData.reduce((sum, item) => 
+                sum + item['Temperature (°C)'], 0) / lastYearData.length;
+            
+            const avgPH = lastYearData.reduce((sum, item) => 
+                sum + item['pH Level'], 0) / lastYearData.length;
+            
+            
+            // Show placeholder for WQI (will be updated after prediction)
+            document.getElementById('current-wqi').textContent = '--';
+            document.getElementById('quality-level').textContent = '--';
+        }
+
+        function initializeCharts() {
+            // Hide all charts initially
+            document.querySelectorAll('.chart-container').forEach(container => {
+                container.style.display = 'none';
+            });
+
+            // Only show ammonia chart by default
+            const ammoniaContainer = document.querySelector('.ammonia-chart');
+            if (ammoniaContainer) {
+                ammoniaContainer.style.display = 'flex';
+            }
+
+            // Initialize all charts but only show ammonia
+            Object.entries(chartConfigs).forEach(([canvasId, config]) => {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                const initialData = prepareChartData('all', 'ammonia'); // Force ammonia data
+                
+                charts[canvasId] = createChart(
+                    ctx,
+                    config.label,
+                    initialData.labels,
+                    initialData.values,
+                    config
+                );
+            });
+        }
+
+        // Create a chart with enhanced visual appeal
+        function createChart(ctx, label, labels, values, config) {
+            // Calculate dynamic min/max for y-axis
+            const min = Math.min(...values) * 0.95;
+            const max = Math.max(...values) * 1.05;
+            
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label,
+                        data: values,
+                        borderColor: config.borderColor,
+                        backgroundColor: config.fillColor,
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 5,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: config.pointColor,
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { 
+                        duration: 800,
+                        easing: 'easeOutQuart'
+                    },
+                    scales: {
+                        y: {
+                            min: min,
+                            max: max,
+                            grid: { 
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: false
+                            },
+                            ticks: { 
+                                color: '#CBD5E1',
+                                callback: function(value) {
+                                    return value.toFixed(1);
+                                }
+                            }
+                        },
+                        x: {
+                            grid: { 
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: false
+                            },
+                            ticks: { 
+                                color: '#CBD5E1',
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            backgroundColor: '#1e293b',
+                            titleColor: '#f9fafb',
+                            bodyColor: '#f9fafb',
+                            cornerRadius: 8,
+                            padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                label: (context) => `${label}: ${context.parsed.y.toFixed(2)}`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Prepare chart data based on time range
+        function prepareChartData(timeRange, parameter) {
+            // Get parameter key
+            const paramKey = getParameterKey(parameter);
+            
+            if (waterQualityData.length === 0) {
+                return { labels: [], values: [] };
+            }
+            
+            // Calculate end date (most recent date in data)
+            const endDate = new Date(waterQualityData[waterQualityData.length - 1].Date);
+            let startDate = new Date(waterQualityData[0].Date);
+            
+            if (timeRange === '2years') {
+                startDate = new Date(endDate);
+                startDate.setFullYear(endDate.getFullYear() - 2);
+            } else if (timeRange === '5years') {
+                startDate = new Date(endDate);
+                startDate.setFullYear(endDate.getFullYear() - 5);
+            }
+            
+            // Filter data for the selected time range
+            const filteredData = waterQualityData.filter(item => {
+                const itemDate = new Date(item.Date);
+                return itemDate >= startDate && itemDate <= endDate;
+            });
+            
+            // Group data by month
+            const monthlyData = {};
+            
+            filteredData.forEach(item => {
+                const date = new Date(item.Date);
+                const monthYear = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                
+                if (!monthlyData[monthYear]) {
+                    monthlyData[monthYear] = {
+                        total: 0,
+                        count: 0
+                    };
+                }
+                
+                monthlyData[monthYear].total += item[paramKey];
+                monthlyData[monthYear].count++;
+            });
+            
+            // Convert to arrays
+            const labels = Object.keys(monthlyData);
+            const values = Object.values(monthlyData).map(month => 
+                month.total / month.count
+            );
+            
+            return { labels, values };
+        }
+
+        // Map parameter names to data keys
+        function getParameterKey(parameter) {
+            const paramMap = {
+                'ammonia': 'Ammonia (mg/L)',
+                'phosphate': 'Phosphate (mg/L)',
+                'oxygen': 'Dissolved Oxygen (mg/L)',
+                'nitrate': 'Nitrate (mg/L)',
+                'ph': 'pH Level',
+                'temperature': 'Temperature (°C)'
+            };
+            return paramMap[parameter] || parameter;
+        }
+
+        // Update charts when time range changes
+        function updateCharts() {
+            const timeRange = document.getElementById('timeRange').value;
+            
+            Object.entries(charts).forEach(([chartId, chart]) => {
+                const param = chartId.replace('Chart', '').toLowerCase();
+                const chartData = prepareChartData(timeRange, param);
+                
+                // Calculate dynamic min/max for y-axis
+                const min = Math.min(...chartData.values) * 0.95;
+                const max = Math.max(...chartData.values) * 1.05;
+                
+                chart.options.scales.y.min = min;
+                chart.options.scales.y.max = max;
+                chart.data.labels = chartData.labels;
+                chart.data.datasets[0].data = chartData.values;
+                chart.update();
+            });
+        }
+
+        // Filter charts based on parameter selection
+        function filterCharts() {
+            const selectedParam = document.getElementById('parameterSelect').value;
+            const chartContainers = document.querySelectorAll('.chart-container');
+            
+            chartContainers.forEach(container => {
+                const chartId = container.querySelector('canvas').id;
+                const chartParam = chartId.replace('Chart', '').toLowerCase();
+                
+                // Show only the selected parameter or all if 'all' is selected
+                container.style.display = (selectedParam === 'all' || chartParam === selectedParam) 
+                    ? 'flex' 
+                    : 'none';
+            });
+        }
+
+        // Perform actual prediction using the backend API
+        async function performPrediction() {
+            const dateInput = document.getElementById('dateInput').value;
+            const modelSelect = document.getElementById('modelSelect').value;
+            const resultDiv = document.getElementById('result');
+            
+            // Show loading state
+            resultDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Predicting water quality for ${dateInput} using ${modelSelect} model...</p>
+                </div>
+            `;
+            
+            try {
+                // Make API call to backend
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        date: dateInput,
+                        model: modelSelect
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    let levelClass;
+                    switch(result.level) {
+                        case 'Excellent': levelClass = "quality-excellent"; break;
+                        case 'Good': levelClass = "quality-good"; break;
+                        case 'Fair': levelClass = "quality-fair"; break;
+                        case 'Poor': levelClass = "quality-poor"; break;
+                        default: levelClass = "";
+                    }
+                    
+                    resultDiv.innerHTML = `
+                        <div class="result-content">
+                            <h3>Prediction Results</h3>
+                            <div class="result-row">
+                                <div class="result-item">
+                                    <div class="result-label">Date</div>
+                                    <div class="result-value">${result.date}</div>
+                                </div>
+                                <div class="result-item">
+                                    <div class="result-label">Predicted WQI</div>
+                                    <div class="result-value">${result.prediction}</div>
+                                </div>
+                                <div class="result-item">
+                                    <div class="result-label">Water Quality</div>
+                                    <div class="result-value ${levelClass}">${result.level}</div>
+                                </div>
+                                <div class="result-item">
+                                    <div class="result-label">Model Used</div>
+                                    <div class="result-value">${result.model}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Update status bar with current prediction
+                    document.getElementById('current-wqi').textContent = result.prediction;
+                    document.getElementById('quality-level').textContent = result.level;
+                    document.getElementById('quality-level').className = levelClass;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result-content">
+                            <h3>Prediction Failed</h3>
+                            <p>${result.message}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result-content">
+                        <h3>Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
